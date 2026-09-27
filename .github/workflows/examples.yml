@@ -1,0 +1,65 @@
+name: Container examples
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross:
+    name: Cross-compile ARMv7 (Docker)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.98.0
+          targets: armv7-unknown-linux-gnueabihf
+      - name: Build cross image
+        run: >-
+          docker build --platform linux/amd64
+          --tag apple-containers-example-cross:local
+          --file containers/cross/Containerfile .
+      - name: Install cross
+        run: cargo install cross --version 0.2.5 --locked
+      - name: Cross-compile
+        run: cross build --locked --release --target armv7-unknown-linux-gnueabihf
+      - uses: actions/upload-artifact@v7
+        with:
+          name: armv7-example
+          path: target/armv7-unknown-linux-gnueabihf/release/apple-containers-example
+          if-no-files-found: error
+
+  quartus:
+    name: Compile Cyclone V example (Docker)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      QUARTUS_ACCEPT_EULA: "1"
+    steps:
+      - uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          swap-size-mb: 1024
+          remove-dotnet: false
+          remove-android: false
+          remove-haskell: false
+          remove-codeql: false
+          remove-docker-images: true
+      - uses: actions/checkout@v7
+      - name: Install Quartus Lite 17.0
+        run: scripts/quartus-docker.sh
+      - name: Compile example
+        run: |
+          docker run --platform linux/amd64 --rm \
+            --volume "$GITHUB_WORKSPACE/build/quartus/intelFPGA_lite:/opt/intelFPGA_lite:ro" \
+            --volume "$GITHUB_WORKSPACE/fpga:/work" \
+            --workdir /work quartus17-runtime:docker-amd64 \
+            quartus_sh --flow compile example
+      - uses: actions/upload-artifact@v7
+        with:
+          name: quartus-example
+          path: fpga/output_files/example.rbf
+          if-no-files-found: error

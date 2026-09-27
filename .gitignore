@@ -1,0 +1,11 @@
+/build/
+/target/
+*.rpt
+*.summary
+*.smsg
+*.qws
+*.sof
+*.rbf
+db/
+incremental_db/
+output_files/

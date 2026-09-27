@@ -51,15 +51,14 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install Quartus Lite 17.0
         run: scripts/quartus-docker.sh
-      - name: Compile example
-        run: |
-          docker run --platform linux/amd64 --rm \
-            --volume "$GITHUB_WORKSPACE/build/quartus/intelFPGA_lite:/opt/intelFPGA_lite:ro" \
-            --volume "$GITHUB_WORKSPACE/fpga:/work" \
-            --workdir /work quartus17-runtime:docker-amd64 \
-            quartus_sh --flow compile example
+      - name: Compile the frozen inputs
+        run: scripts/quartus-build.sh docker
       - uses: actions/upload-artifact@v7
         with:
           name: quartus-example
-          path: fpga/output_files/example.rbf
+          path: |
+            fpga/output_files/example.rbf
+            fpga/output_files/build-manifest.txt
+            fpga/output_files/*.rpt
+            fpga/output_files/*.summary
           if-no-files-found: error
